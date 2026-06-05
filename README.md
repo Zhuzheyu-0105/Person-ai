@@ -155,6 +155,4 @@ Full methodology: see `docs/architecture.md`.
 
 ---
 
-## License
 
-MIT
