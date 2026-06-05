@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+__pycache__
+.DS_Store
+*.zip
+.venv/
+venv/
+htmlcov/
+coverage.xml
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+persona_emotion_session_v3.json
