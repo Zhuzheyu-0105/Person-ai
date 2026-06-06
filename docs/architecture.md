@@ -10,23 +10,32 @@ Unlike prompt-only or fine-tune-only approaches, this architecture provides
 ## The Four Layers
 
 ```
-┌─────────────────────────────────────────────┐
-│              Layer 1: Personality Definition │
-│  OCEAN (Big Five) + MBTI + Custom Traits     │
-│  + Language Feature Corpus                   │
-├─────────────────────────────────────────────┤
-│              Layer 2: Personality Engine      │
-│  Tone Injection → Style Fix → Emotion → C01-C08│
-│  Programmatic Guardrails                     │
-├─────────────────────────────────────────────┤
-│              Layer 3: Multi-Modal Output      │
-│  Text (Production) · TTS · Avatar (Future)   │
-│  Channel-Specific Adaptation                 │
-├─────────────────────────────────────────────┤
-│              Layer 4: Memory System           │
-│  Episodic · Semantic · Relationship (Intimacy)│
-└─────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────┐
+│           Layer 1: Personality Definition         │
+│   OCEAN (Big Five) + MBTI + Custom Traits         │
+│   + Language Feature Corpus                       │
+├──────────────────────────────────────────────────┤
+│           Layer 2: Personality Engine (v5)         │
+│   Emotion Engine (PAD+OCC+Neuro) + C01-C08        │
+│   Programmatic Guardrails                         │
+├──────────────────────────────────────────────────┤
+│           Layer 3: Multi-Modal Output              │
+│   Text (Production) · TTS (Optional)              │
+│   ⚠ DISCONTINUED — no budget for voice/video      │
+├──────────────────────────────────────────────────┤
+│           Layer 4: Memory System                   │
+│   Episodic · Semantic · Relationship (Intimacy)   │
+│   + Persistent per-user trust + daily decay       │
+└──────────────────────────────────────────────────┘
 ```
+
+### Layer 3 Status
+
+As of June 2026, Layer 3 multi-modal development is discontinued. This project
+is unfunded — the author is a graduate student with no budget for cloud GPU,
+TTS API subscriptions, or avatar tooling. The text pipeline (Layer 2) is
+production-ready and will continue to be maintained. Pull requests for TTS
+or avatar integrations are welcome but will not be built by the project.
 
 ---
 
@@ -110,7 +119,9 @@ LLM Raw Output → Tone Injection → Style Fix → Emotion Modulation → Consi
 | `style_fixer.py` | Sentence splitting + de-formalization + filler removal | Raw text → Clean text |
 | `consistency_checker.py` | C01-C08 rule validation | Text → CheckResult(violations) |
 | `pipeline.py` | Full pipeline orchestration | Raw text + Scene → CheckResult |
-| `emotion_engine_v3.py` | Six-layer emotion dynamics (PAD + OCC) | User input + Events → Modulated text |
+| `emotion_engine_v3.py` | Seven-layer emotion engine (PAD+OCC+Neuro) | User input + Events → Modulated text + Prompt context |
+| `emotion_classifier.py` | Chinese lexicon emotion classifier (0.03ms) | Text → PADState + label + confidence |
+| `relationship_memory.py` | Persistent per-user intimacy + trust tracking | User ID + Events → Relationship state |
 | `config.py` | All configurable parameters (tone words, rules, boundaries) | — |
 
 ---
@@ -120,15 +131,12 @@ LLM Raw Output → Tone Injection → Style Fix → Emotion Modulation → Consi
 | Modality | Status | Notes |
 |----------|--------|-------|
 | Text | Production | Primary channel, personality injected |
-| TTS (Standard) | Verified | Edge TTS compatible |
-| TTS (Voice Clone) | Optional | Requires GPU/cloud |
-| Avatar | Future | Live2D/VRM |
+| TTS (Standard) | Frozen | Edge TTS compatible, no further development |
+| TTS (Voice Clone) | Discontinued | No budget for GPU/cloud |
+| Avatar | Discontinued | No budget or bandwidth |
 
-### Channel Adaptation
-
-Different channels enforce different rules — e.g., C06 (internal exposure) is
-strictly enforced on public channels but may be relaxed for trusted development
-channels.
+⚠ **Frozen as of June 2026.** This project has no funding. Text output is the
+only maintained Layer 3 channel.
 
 ---
 
@@ -203,21 +211,24 @@ channels.
 - Purely reactive (no proactive messaging)
 - Memory capacity bounded (vs. vector-DB systems like mem0)
 - Personality is "worn" (rule-injected), not "grown" (neural emergence)
-- User emotion perception is keyword-based (lighter than dedicated ML models)
+- User emotion perception is lexicon-based (F1 ~0.7, lighter than BERT classifiers)
+- Voice/video/avatar output discontinued due to budget constraints
 
-### Emotion Engine (v3)
+### Emotion Engine (v5)
 
-The v3 release adds a six-layer emotion architecture based on academic gold standards:
+The v5 release adds a seven-layer emotion architecture grounded in neuroscience:
 
-1. **User Perception** — Keyword+confidence-based emotion classification → PAD coordinates
-2. **OCC Appraisal** — Every event passes through cognitive evaluation with personality biases
-3. **Emotional Contagion** — User emotion partially penetrates AI emotion (CHI'21)
-4. **Emotion/Mood Dual-Layer** — Fast emotion spikes + slow mood background, exponential decay
-5. **Expression Modulation** — PAD state drives text style (self-deprecation, validating, warmth)
-6. **Session Persistence** — Emotion state saved/restored across sessions with time-based decay
+1. **User Perception** — Chinese lexicon classifier (0.03ms) + keyword hybrid → PAD coordinates
+2. **OCC Appraisal** — 22 event types with scene-dependent OCEAN modulation + frequency habituation
+3. **Emotional Contagion** — Trust-modulated emotional infection with floor protection (CHI'21)
+4. **Emotion/Mood Dual-Layer** — Extinction learning replaces blind decay; episodic memory reconsolidation
+5. **Allostatic Load** — Cumulative stress tracking (McEwen 1998); drives chronic/delayed recovery trajectories
+6. **Expression Modulation** — CHI'24 empathic restatement validating phrases + rhythm + self-deprecation
+7. **Session Persistence** — Daily reset (CHI'22) + episodic reconsolidation (unresolved episodes → 15% residue)
 
-Re-appraisal (Scherer CPM) triggers post-settle: praised events are re-evaluated downward
-("they're just being polite"), corrections trigger rapid recovery ("it's fixable, move on").
+New in v5: `set_scene()` for OCEAN modulation, `get_prompt_context()` for pre-prompt
+injection, `load_relationship()`/`save_relationship()` for persistent trust, and
+`extinction_step()` for user-acceptance-gated emotional recovery.
 
 ---
 
@@ -227,17 +238,20 @@ Re-appraisal (Scherer CPM) triggers post-settle: praised events are re-evaluated
 structured-persona-engine/
 ├── README.md
 ├── pyproject.toml
+├── pytest.ini
 ├── docs/
 │   ├── architecture.md          ← This file
 │   └── layer1_schema.json       ← JSON Schema template
 ├── engine/
 │   ├── __init__.py
 │   ├── config.py                ← Persona configuration
-│   ├── pipeline.py              ← Main pipeline
+│   ├── pipeline.py              ← v5 pipeline (full lifecycle + fallback)
 │   ├── tone_injector.py         ← Tone word injection
 │   ├── style_fixer.py           ← Sentence style correction
-│   ├── consistency_checker.py   ← C01-C08 validation
-│   └── emotion_engine_v3.py     ← Six-layer emotion engine
+│   ├── consistency_checker.py   ← C01-C08 validation (scene-aware)
+│   ├── emotion_engine_v3.py     ← Seven-layer emotion engine (v5)
+│   ├── emotion_classifier.py    ← Chinese lexicon emotion classifier
+│   └── relationship_memory.py   ← Persistent per-user relationship state
 ├── tests/
 │   ├── test_tone_injector.py
 │   ├── test_style_fixer.py
@@ -254,17 +268,27 @@ structured-persona-engine/
 python -m pytest tests/ -v
 
 # Run self-tests
+python -m engine.emotion_engine_v3
+python -m engine.emotion_classifier
 python -m engine.pipeline
-python -m engine.tone_injector
-python -m engine.style_fixer
 python -m engine.consistency_checker
+python -m engine.relationship_memory
 
-# Use in your project
+# Basic usage
 from engine import run_pipeline
-
 result = run_pipeline("your AI's raw reply text", scene="delivery")
-if result.passed:
-    send_to_user(result.text)
-else:
-    log_violations(result.violations)
+
+# v5 full lifecycle
+from engine import run_pipeline_v5, EmotionEngineV3
+
+emo = EmotionEngineV3()
+emo.load_relationship("user_123")
+prompt_ctx = emo.get_prompt_context()  # → inject into LLM system prompt
+result = run_pipeline_v5(
+    user_text="I'm frustrated with this bug",
+    raw_reply="Let me help you fix that.",
+    emo=emo,
+    event_type="complaint",
+    scene="enterprise",
+)
 ```

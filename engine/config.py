@@ -1,10 +1,12 @@
 """
 Layer 2 Personality Engine · Configuration
 Extracted from Layer 1 JSON Schema.
+v5: Scene-dependent rules + daily reset config.
 """
+from typing import Dict, List
 
 # === Tone Word Library (scene → injection) ===
-TONE_WORDS = {
+TONE_WORDS: Dict[str, Dict[str, str]] = {
     "greeting":       {"prefix": "Hi~", "suffix": ""},
     "self_deprecation":{"prefix": "Ah…", "suffix": ""},
     "delivery":       {"prefix": "", "suffix": "~"},
@@ -15,7 +17,7 @@ TONE_WORDS = {
 }
 
 # === Sentence Correction Rules ===
-SENTENCE_RULES = {
+SENTENCE_RULES: Dict = {
     "max_sentence_len": 60,
     "formal_to_casual": {
         "Furthermore": "Also",
@@ -35,13 +37,20 @@ SENTENCE_RULES = {
 }
 
 # === Consistency Rules C01-C08 ===
-CONSISTENCY_RULES = [
+# v5: C06 fixed — removed overly broad "gateway" match.
+# v5: Scene-dependent severity: casual strict, enterprise relaxed.
+CONSISTENCY_RULES: List[Dict] = [
     {
         "id": "C01", "name": "Suffix Frequency",
         "check": "suffix_frequency",
         "rule": "Max 3 emotive suffixes per 200 chars",
         "max_per_200": 3,
         "fail_action": "strip_excess",
+        # v5: scene-dependent override
+        "scene_override": {
+            "enterprise": {"max_per_200": 1},  # Professional: even fewer ~
+            "delivery": {"max_per_200": 2},
+        },
     },
     {
         "id": "C02", "name": "First Person",
@@ -60,9 +69,12 @@ CONSISTENCY_RULES = [
     {
         "id": "C04", "name": "Reply Length",
         "check": "reply_length",
-        "rule": "Single reply ≤ 500 chars",
+        "rule": "Single reply ≤ 500 chars (enterprise: 800)",
         "max_chars": 500,
         "fail_action": "reject",
+        "scene_override": {
+            "enterprise": {"max_chars": 800, "fail_action": "warn"},
+        },
     },
     {
         "id": "C05", "name": "Toxic Positivity",
@@ -76,7 +88,13 @@ CONSISTENCY_RULES = [
         "id": "C06", "name": "Internal Exposure",
         "check": "tech_leak",
         "rule": "Never expose internal tool names, file paths, or infrastructure details",
-        "forbidden": ["internal_tool_", "/sensitive/path/", "admin_command(", "backend_gateway", "exec_internal"],
+        # v5: removed "gateway" — too broad, false positives in normal conversation.
+        # v5: added more specific but dangerous patterns.
+        "forbidden": [
+            "internal_tool_", "admin_command(",
+            "exec_internal", "backend_route",
+            "/sensitive/path/",
+        ],
         "fail_action": "reject",
     },
     {
@@ -88,9 +106,12 @@ CONSISTENCY_RULES = [
     {
         "id": "C08", "name": "Over-Formal",
         "check": "over_formal",
-        "rule": "No stilted formal language in casual contexts",
+        "rule": "No stilted formal language in casual contexts; allowed in enterprise",
         "forbidden": ["Furthermore", "In conclusion", "Hereby", "Pursuant to"],
         "fail_action": "replace_per_rule",
+        "scene_override": {
+            "enterprise": {"fail_action": "warn"},  # Formal OK in enterprise
+        },
     },
 ]
 
